@@ -8,13 +8,13 @@ import unittest
 from workbench.reports.supplier import build_report, summarize_phase
 
 
-def record(sequence, offset=0.0, *, success=True, latency=0.2):
+def record(sequence, offset=0.0, *, success=True, latency=0.2, ttft=.04, ttfot=.12):
     return {"schema_version": 1, "sequence": sequence, "request_id": f"request-{sequence:06d}",
             "started_epoch": 1800000000 + offset, "completed_epoch": 1800000000 + offset + latency,
             "started_monotonic": 1000 + offset, "completed_monotonic": 1000 + offset + latency,
             "start_offset_seconds": offset, "scheduled_offset_seconds": (sequence - 1) * .3,
             "schedule_delay_ms": (offset - (sequence - 1) * .3) * 1000,
-            "ttft_seconds": .04 if success else None, "ttfot_seconds": .12 if success else None,
+            "ttft_seconds": ttft if success else None, "ttfot_seconds": ttfot if success else None,
             "latency_seconds": latency, "http_status": 200 if success else 429,
             "strict_success": success, "error_code": None if success else "HTTP_429",
             "done_received": success, "finish_reason": "stop" if success else None,
@@ -172,6 +172,156 @@ class SupplierReportTests(unittest.TestCase):
             result = build_report(root)
             self.assertEqual(result["assessment"], "not_passed")
             self.assertEqual(result["failures"], ["latency:TTFOT_P95_SECONDS_NOT_MET"])
+
+    def test_ttft_p50_uses_strict_less_than_without_rounding_the_decision(self):
+        for actual, expected in ((.999, True), (1.0, False), (1.001, False)):
+            with self.subTest(actual=actual), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                write_phase(root / "latency", [record(1, latency=2, ttft=actual, ttfot=1.5)])
+                manifest(root, [phase(count=1)], thresholds={"ttft_p50_seconds": 1.0})
+                result = build_report(root)
+                check = result["phases"][0]["ttft_p50_check"]
+                self.assertEqual(check, {"actual_seconds": actual, "limit_seconds": 1.0,
+                                         "operator": "<", "met": expected})
+                self.assertEqual(result["assessment"], "measurement_only" if expected else "not_passed")
+                self.assertEqual(result["thresholds"]["ttft_p50_seconds"], 1.0)
+
+    def test_p50_judges_latency_and_200rpm_separately_not_pooled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_phase(root / "latency", [record(i + 1, i * 3, latency=2, ttft=.2, ttfot=1.5) for i in range(5)])
+            write_phase(root / "rpm200", [record(i + 1, i * .3 + .001, latency=2, ttft=1.2, ttfot=1.5) for i in range(2)], schedule=True)
+            manifest(root, [phase(count=5), phase("rpm200", 2, 200, .6)], thresholds={"ttft_p50_seconds": 1.0})
+            result = build_report(root)
+            checks = {p["name"]: p["ttft_p50_check"] for p in result["phases"]}
+            self.assertTrue(checks["latency"]["met"])
+            self.assertFalse(checks["rpm200"]["met"])
+            self.assertEqual(checks["latency"]["actual_seconds"], .2)
+            self.assertEqual(checks["rpm200"]["actual_seconds"], 1.2)
+            self.assertEqual(result["failures"], ["rpm200:TTFT_P50_SECONDS_NOT_MET"])
+            self.assertEqual(result["assessment"], "not_passed")
+
+    def test_connectivity_and_ramp_stages_do_not_receive_p50_gate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            planned = [phase("connectivity", 1), phase(count=1), phase("rpm50", 2, 50, 2.4),
+                       phase("rpm100", 2, 100, 1.2), phase("rpm200", 2, 200, .6)]
+            for item in planned:
+                is_measured = item["name"] in {"latency", "rpm200"}
+                interval = 60 / item["rpm"] if item["rpm"] else 3
+                rows = [record(i + 1, i * interval + .001, latency=6,
+                               ttft=.5 if is_measured else 4, ttfot=5) for i in range(item["count"])]
+                write_phase(root / item["name"], rows, schedule=bool(item["rpm"]))
+            manifest(root, planned, thresholds={"ttft_p50_seconds": 1.0, "min_success_rate": 1.0})
+            result = build_report(root)
+            checks = {p["name"]: p["ttft_p50_check"] for p in result["phases"]}
+            self.assertTrue(checks["latency"]["met"])
+            self.assertTrue(checks["rpm200"]["met"])
+            for name in ("connectivity", "rpm50", "rpm100"):
+                self.assertIsNone(checks[name])
+            self.assertEqual(result["assessment"], "passed")
+
+    def test_p50_is_first_generated_token_not_first_answer_body(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_phase(root / "latency", [record(1, latency=5, ttft=.25, ttfot=4)])
+            manifest(root, [phase(count=1)], thresholds={"ttft_p50_seconds": 1.0})
+            result = build_report(root)
+            self.assertEqual(result["phases"][0]["ttft_p50_check"]["actual_seconds"], .25)
+            self.assertTrue(result["phases"][0]["ttft_p50_check"]["met"])
+            self.assertEqual(result["phases"][0]["ttfot_seconds"]["p50"], 4)
+
+    def test_historical_manifest_without_p50_keeps_legacy_p95_assessment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_phase(root / "latency", [record(1, latency=2, ttft=1.0, ttfot=1.5)])
+            manifest(root, [phase(count=1)], thresholds={"ttft_p95_seconds": 1.0})
+            result = build_report(root)
+            self.assertIsNone(result["thresholds"]["ttft_p50_seconds"])
+            self.assertIsNone(result["phases"][0]["ttft_p50_check"])
+            self.assertEqual(result["assessment"], "passed")
+
+    def test_p50_pass_with_partial_failure_cannot_approve_without_success_gate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_phase(root / "latency", [record(1), record(2, .3, success=False)])
+            manifest(root, [phase()], thresholds={"ttft_p50_seconds": 1.0})
+            result = build_report(root)
+            self.assertTrue(result["phases"][0]["ttft_p50_check"]["met"])
+            self.assertEqual(result["phases"][0]["success_rate"], .5)
+            self.assertEqual(result["assessment"], "measurement_only")
+            workbench = json.loads((root / "workbench-summary.json").read_text())
+            self.assertEqual(workbench["conclusion"], "needs_more_data")
+            data = json.loads((root / "report-data.json").read_text())
+            self.assertIn("P50 分项达标不等于整体准入通过", data["sections"][0]["body"])
+
+    def test_p50_without_success_gate_stays_measurement_even_with_p95(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_phase(root / "latency", [record(1)])
+            manifest(root, [phase(count=1)], thresholds={"ttft_p50_seconds": 1.0, "ttft_p95_seconds": 1.0})
+            self.assertEqual(build_report(root)["assessment"], "measurement_only")
+
+    def test_p50_does_not_hide_an_explicit_success_rate_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_phase(root / "latency", [record(1), record(2, .3, success=False)])
+            manifest(root, [phase()], thresholds={"ttft_p50_seconds": 1.0, "min_success_rate": .99})
+            result = build_report(root)
+            self.assertTrue(result["phases"][0]["ttft_p50_check"]["met"])
+            self.assertEqual(result["assessment"], "not_passed")
+            self.assertIn("latency:MIN_SUCCESS_RATE_NOT_MET", result["failures"])
+
+    def test_p50_without_success_samples_is_not_passed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_phase(root / "latency", [record(1, success=False)])
+            manifest(root, [phase(count=1)], thresholds={"ttft_p50_seconds": 1.0})
+            result = build_report(root)
+            self.assertIsNone(result["phases"][0]["ttft_p50_check"]["actual_seconds"])
+            self.assertFalse(result["phases"][0]["ttft_p50_check"]["met"])
+            self.assertEqual(result["assessment"], "not_passed")
+
+    def test_incomplete_phase_keeps_p50_value_but_never_says_it_passed(self):
+        for failure in ("native_missing", "request_missing", "run_failed"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                rows = [record(1)] if failure == "request_missing" else [record(1), record(2, .3)]
+                write_phase(root / "latency", rows, native=failure != "native_missing")
+                runs = [{"name": "latency", "status": "failed", "exit_code": 124, "run_dir": "latency"}] if failure == "run_failed" else None
+                manifest(root, [phase()], thresholds={"ttft_p50_seconds": 1.0}, runs=runs)
+                result = build_report(root)
+                check = result["phases"][0]["ttft_p50_check"]
+                self.assertEqual(check["actual_seconds"], .04)
+                self.assertIsNone(check["met"])
+                self.assertEqual(result["assessment"], "incomplete")
+                self.assertNotIn("latency:TTFT_P50_SECONDS_NOT_MET", result["failures"])
+                data = json.loads((root / "report-data.json").read_text())
+                card = next(m for m in data["metrics"] if m["label"] == "低负载 TTFT P50")
+                self.assertIn("证据不足", card["note"])
+                self.assertNotIn("达标", card["note"])
+                self.assertEqual(card["tone"], "warn")
+                self.assertIn("证据不足", data["rows"][0]["ttft_p50_check"])
+
+    def test_html_promotes_both_p50s_and_preserves_p95_and_first_body(self):
+        for actual in (.9996, .9999999):
+            with self.subTest(actual=actual), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                write_phase(root / "latency", [record(1, latency=2, ttft=actual, ttfot=1.5)])
+                write_phase(root / "rpm200", [record(1, .001, latency=2, ttft=.9, ttfot=1.5)], schedule=True)
+                manifest(root, [phase(count=1), phase("rpm200", 1, 200, .3)], thresholds={"ttft_p50_seconds": 1.0})
+                result = build_report(root)
+                data = json.loads((root / "report-data.json").read_text())
+                metrics = {row["label"]: row for row in data["metrics"]}
+                self.assertIn("低负载 TTFT P50", metrics)
+                self.assertIn("200 RPM TTFT P50", metrics)
+                shown = float(metrics["低负载 TTFT P50"]["value"].removesuffix(" s"))
+                self.assertLess(shown, 1.0)
+                self.assertIn("达标", metrics["低负载 TTFT P50"]["note"])
+                keys = {column["key"] for column in data["columns"]}
+                self.assertTrue({"ttft_p50", "ttft_p50_check", "ttft", "ttfot"}.issubset(keys))
+                self.assertEqual(data["rows"][0]["ttfot"], "1.500 s")
+                self.assertTrue(result["phases"][0]["ttft_p50_check"]["met"])
 
     def test_missing_phase_is_incomplete_not_supplier_rejection(self):
         with tempfile.TemporaryDirectory() as tmp:

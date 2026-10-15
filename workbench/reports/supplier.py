@@ -34,6 +34,7 @@ ERROR_CODES = {
 }
 PHASE_LABELS = {"connectivity": "连通性", "latency": "低负载计时", "rpm50": "50 RPM",
                 "rpm100": "100 RPM", "rpm200": "200 RPM"}
+TTFT_P50_PHASES = {"latency", "rpm200"}
 ASSESSMENT_LABELS = {"measurement_only": "已完成测量，未判定 SLA", "passed": "满足已设阈值",
                      "not_passed": "未达到本次测试要求", "incomplete": "测试或证据未完成，不能判断供应商"}
 
@@ -205,6 +206,7 @@ def summarize_phase(directory: Path | str, phase: dict) -> dict:
             "success_rate": len(good) / expected if expected > 0 else None,
             "evidence_status": "complete" if not issues else "incomplete", "issues": sorted(set(issues)),
             "ttft_seconds": distribution([row["ttft_seconds"] for row in good]),
+            "ttft_p50_check": None,
             "ttfot_seconds": distribution([row["ttfot_seconds"] for row in good]),
             "latency_seconds": distribution([row["latency_seconds"] for row in good]),
             "errors": dict(sorted(errors.items())), "rate": rate, "records": records,
@@ -216,6 +218,43 @@ def summarize_phase(directory: Path | str, phase: dict) -> dict:
 
 def _write_json(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+
+
+def _p50_label(phase: dict) -> str:
+    check = phase.get("ttft_p50_check")
+    if check is None:
+        return "未设门槛" if phase.get("name") in TTFT_P50_PHASES else "不适用"
+    if check["met"] is None:
+        return "证据不足"
+    return "达标" if check["met"] else "无有效样本" if check["actual_seconds"] is None else "未达标"
+
+
+def _p50_value(phase: dict) -> str:
+    value = (phase.get("ttft_seconds") or {}).get("p50")
+    if value is None:
+        return "–"
+    text = f"{value:.6f}".rstrip("0").rstrip(".")
+    check = phase.get("ttft_p50_check")
+    # Do not round a passing value up to the strict threshold (or vice versa).
+    if check is not None and check["met"] is not None and (float(text) < check["limit_seconds"]) != check["met"]:
+        text = repr(value)
+    return text + " s"
+
+
+def _p50_note(phase: dict) -> str:
+    check = phase.get("ttft_p50_check")
+    if check is None:
+        return _p50_label(phase)
+    if check["met"] is None:
+        return f"证据不足 · 要求 < {check['limit_seconds']:g} s，暂不判定"
+    return f"{_p50_label(phase)} · 要求 < {check['limit_seconds']:g} s，等于门槛不达标"
+
+
+def _p50_tone(phase: dict) -> str:
+    check = phase.get("ttft_p50_check")
+    if check is None:
+        return ""
+    return "warn" if check["met"] is None else "good" if check["met"] else "bad"
 
 
 def build_report(output: Path | str) -> dict:
@@ -251,22 +290,36 @@ def build_report(output: Path | str) -> dict:
         issues.append("PLANNED_TOTAL_MISMATCH")
     thresholds = (manifest.get("target") or {}).get("thresholds") or {}
     configured = {key: finite(thresholds.get(key)) for key in (
-        "min_success_rate", "ttft_p95_seconds", "ttfot_p95_seconds")}
+        "min_success_rate", "ttft_p50_seconds", "ttft_p95_seconds", "ttfot_p95_seconds")}
     failures = []
+    p50_limit = configured["ttft_p50_seconds"]
     for phase in phases:
+        if phase["name"] in TTFT_P50_PHASES and p50_limit is not None:
+            actual = phase["ttft_seconds"]["p50"]
+            evidence_complete = (phase["evidence_status"] == "complete"
+                                 and phase["run_status"] == "completed" and phase["exit_code"] == 0)
+            met = (actual is not None and actual < p50_limit) if evidence_complete else None
+            phase["ttft_p50_check"] = {"actual_seconds": actual, "limit_seconds": p50_limit,
+                                       "operator": "<", "met": met}
+            if met is False:
+                failures.append(f"{phase['name']}:TTFT_P50_SECONDS_NOT_MET")
         if (phase["name"] == "connectivity" and phase["failed"]) or phase["valid_success"] == 0:
             failures.append(f"{phase['name']}:REQUEST_FAILURES")
         if phase["rate"] and phase["rate"]["met"] is False:
             failures.append(f"{phase['name']}:RPM_NOT_REACHED")
         for key, threshold in configured.items():
-            if threshold is None:
+            if threshold is None or key == "ttft_p50_seconds":
                 continue
             actual = (phase["success_rate"] if key == "min_success_rate" else
                       phase["ttft_seconds" if key == "ttft_p95_seconds" else "ttfot_seconds"]["p95"])
             if actual is None or (actual < threshold if key == "min_success_rate" else actual > threshold):
                 failures.append(f"{phase['name']}:{key.upper()}_NOT_MET")
-    assessment = ("incomplete" if issues else "not_passed" if failures else "passed" if any(v is not None for v in configured.values())
-                  else "measurement_only")
+    # P50 is a latency subcheck, not a replacement for the success-rate gate.
+    # Preserve historical P95-only assessments when P50 was never configured.
+    p50_without_success_gate = p50_limit is not None and configured["min_success_rate"] is None
+    assessment = ("incomplete" if issues else "not_passed" if failures else
+                  "measurement_only" if p50_without_success_gate else
+                  "passed" if any(v is not None for v in configured.values()) else "measurement_only")
     summary = {"schema_version": 1, "pack_version": manifest.get("pack_version"),
                "engine": manifest.get("engine"), "demo": manifest.get("demo") is True,
                "status": "failed" if issues else "completed", "complete": not issues, "assessment": assessment,
@@ -293,17 +346,21 @@ def build_report(output: Path | str) -> dict:
                       "metrics": phase} for phase in phases]}
     _write_json(output / "workbench-summary.json", workbench)
     target = summary["target"]
-    measurement = next((p for p in phases if p["name"] == "latency"), phases[0] if phases else {})
+    measurement = next((p for p in phases if p["name"] == "latency"), {})
     rpm200 = next((p for p in phases if p["name"] == "rpm200"), {})
     title = "供应商专项测试报告" + (" · 本地模拟" if summary["demo"] else "")
     sections = [{"title": "本次结论", "body": ASSESSMENT_LABELS[assessment] + "。" +
                  ("这是本机模拟接口的工具验证，不能代表 GLM 5.3 或任何供应商性能。" if summary["demo"] else "") +
                  (" 发压条件未完成，不能仅凭此项归因于供应商。" if any("RPM_NOT_REACHED" in failure for failure in failures) else "") +
+                 (" 尚未约定最低成功率；P50 分项达标不等于整体准入通过。" if p50_without_success_gate else "") +
                  (" 未设 SLA 阈值：仅报告实测分布。" if not any(v is not None for v in configured.values()) else ""),
                  "tone": "bad" if assessment == "not_passed" else "warn" if assessment in ("measurement_only", "incomplete") else "good"},
                 {"title": "首 Token 口径", "body": "TTFT 从客户端发起 HTTP 调用前计时，到首个非空思考或正文；TTFOT 到首个非空正文。包含连接池等待、DNS/TLS/建连，不包含发压排队；仅成功完整请求计入分位数，失败单独计数。与不含建连的工具口径不可直接比较。"},
                 {"title": "RPM 与完成口径", "body": "RPM 是固定时间窗口内的客户端发起数，不是并发数或成功数。窗口从请求就绪时起算，包含进入官方调度器的开销，是原生调度起点的保守下界；绝不移动到首个请求。每分钟允许 1 次边界请求，须同时覆盖计划跨度。窗口结束后等待在途请求排空，尾部完成单列；发起记录不能证明服务端已收到。"},
                 {"title": "完整成功", "body": "HTTP 200、非空正文、finish_reason=stop、[DONE] 均满足才算成功。只有思考、空回复、length 截断、断流、限流和超时均失败。未返回 usage 时 Token 用量未知，不估算为 0。"}]
+    if p50_limit is not None:
+        sections.insert(1, {"title": "首 Token P50 验收",
+                            "body": f"低负载与 200 RPM 阶段分别要求 TTFT P50 < {p50_limit:g} 秒，等于门槛不达标；仅使用各阶段完整成功请求，不混合阶段。连通性单请求及爬坡阶段不参与此判定。首正文 TTFOT 和 P95 另列，不代替 TTFT P50。"})
     if issues or failures:
         sections.insert(1, {"title": "需处理项", "body": "；".join(issues + failures), "tone": "bad"})
     for phase in phases:
@@ -317,17 +374,22 @@ def build_report(output: Path | str) -> dict:
                "subtitle": f"{target['supplier']} / {target['model']} · {target['region']} · EvalScope 1.13.0 · {target['reasoning_mode']}",
                "status": "rejected" if assessment == "not_passed" else "approved" if assessment == "passed" else "needs_more_data",
                "metrics": [{"label": "完整成功 / 计划", "value": f"{summary['valid_success']} / {summary['planned_requests']}", "note": f"记录 {len(csv_rows)} 次请求，包含失败"},
-                           {"label": "首生成 P95", "value": number((measurement.get('ttft_seconds') or {}).get('p95'), ' s', 3), "note": "低负载，首思考或正文"},
-                           {"label": "首正文 P95", "value": number((measurement.get('ttfot_seconds') or {}).get('p95'), ' s', 3), "note": "低负载，首个非空回答"},
+                           {"label": "低负载 TTFT P50", "value": _p50_value(measurement), "note": _p50_note(measurement),
+                            "tone": _p50_tone(measurement)},
+                           {"label": "200 RPM TTFT P50", "value": _p50_value(rpm200), "note": _p50_note(rpm200),
+                            "tone": _p50_tone(rpm200)},
                            {"label": "200 RPM 实际发起", "value": number((rpm200.get('rate') or {}).get('actual_start_rpm'), ' RPM', 2), "note": "固定窗口，不等于成功完成速率"}],
                "sections": sections,
                "columns": [{"key": "phase", "label": "阶段"}, {"key": "count", "label": "记录 / 计划"},
-                           {"key": "success", "label": "完整成功率"}, {"key": "ttft", "label": "首生成 P95"},
+                           {"key": "success", "label": "完整成功率"},
+                           {"key": "ttft_p50", "label": "TTFT P50"}, {"key": "ttft_p50_check", "label": "P50 分项判定"},
+                           {"key": "ttft", "label": "首生成 P95"},
                            {"key": "ttfot", "label": "首正文 P95"}, {"key": "rate", "label": "发起 RPM"},
                            {"key": "errors", "label": "失败类型"}, {"key": "evidence", "label": "证据完整性"},
                            {"key": "report", "label": "原生报告", "link": True}],
                "rows": [{"phase": PHASE_LABELS.get(p["name"], p["name"]),
                          "count": f"{p['recorded_count']} / {p['planned_count']}", "success": percent(p["success_rate"]),
+                         "ttft_p50": _p50_value(p), "ttft_p50_check": _p50_note(p),
                          "ttft": number(p["ttft_seconds"]["p95"], " s", 3), "ttfot": number(p["ttfot_seconds"]["p95"], " s", 3),
                          "rate": number((p["rate"] or {}).get("actual_start_rpm"), " RPM", 2),
                          "errors": "; ".join(f"{k}: {v}" for k, v in p["errors"].items()) or "无",

@@ -18,7 +18,7 @@ import urllib.parse
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-PACK_VERSION = "2.1.0"
+PACK_VERSION = "2.2.0"
 ENGINE_VERSION = "1.13.0"
 KEY_ENV = "SUPPLIER_API_KEY"
 
@@ -70,8 +70,9 @@ def validate_config(config, demo=False):
                 check(item)
     check(extras)
     thresholds = config.get("thresholds", {})
-    if not isinstance(thresholds, dict) or set(thresholds) - {"min_success_rate", "ttft_p95_seconds", "ttfot_p95_seconds"}:
+    if not isinstance(thresholds, dict) or set(thresholds) - {"min_success_rate", "ttft_p50_seconds", "ttft_p95_seconds", "ttfot_p95_seconds"}:
         raise ValueError("thresholds 字段无效。")
+    thresholds = {"ttft_p50_seconds": 1.0, **thresholds}
     for name, value in thresholds.items():
         if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0 or (name == "min_success_rate" and value > 1)):
             raise ValueError("阈值应为正数或 null；成功率使用 0–1 小数。")
@@ -96,7 +97,7 @@ def configure(path):
         return validate_config(json.loads(path.read_text(encoding="utf-8")))
     print("首次填写一次接口信息；API Key 不保存到配置。")
     labels = [("supplier", "供应商名称"), ("base_url", "API 基础地址，例如 https://api.example.com/v1"), ("model", "GLM 5.3 精确模型 ID（按接口实际名称）"), ("region", "测试机器地区/运营商或云区域"), ("reasoning_mode", "思考模式（填写实际默认或约定模式）")]
-    config = {"schema_version": 1, **{name: input(label + "：").strip() for name, label in labels}, "max_output_tokens": 4096, "extra_body": {}, "thresholds": {"min_success_rate": None, "ttft_p95_seconds": None, "ttfot_p95_seconds": None}}
+    config = {"schema_version": 1, **{name: input(label + "：").strip() for name, label in labels}, "max_output_tokens": 4096, "extra_body": {}, "thresholds": {"min_success_rate": None, "ttft_p50_seconds": 1.0, "ttft_p95_seconds": None, "ttfot_p95_seconds": None}}
     config = validate_config(config)
     write_json(path, config)
     print(f"非敏感配置已保存：{path}")
@@ -268,7 +269,12 @@ def main(argv=None):
         plan = make_plan(config, demo, demo and not options.full)
         print(f"\n{'本机模拟' if demo else '真实接口'}测试计划：{plan['planned_requests']} 次请求；最后 200 RPM 持续 {plan['phases'][-1]['window_seconds']} 秒。")
         print(f"输出 Token 上限 {plan['output_token_upper_bound']:,}，另计输入/思考；不是预计费用。")
-        print("首生成内容/首正文及成功率阈值未配置时只测量，不宣称 SLA 通过。")
+        p50_limit = config["thresholds"].get("ttft_p50_seconds")
+        if p50_limit is not None:
+            print(f"TTFT P50 要求严格 < {p50_limit:g} 秒：低负载与 200 RPM 分别判定；首正文另报。")
+        else:
+            print("TTFT P50 门槛未配置，仅报告实测分布。")
+        print("未约定成功率门槛时，延迟分项达标不代表整体供给或 SLA 已通过。")
         print("回传 ZIP 不包含 API Key，无需向采购方提供 Key；打包前检查残留，检测到即阻止打包。")
         if options.command == "plan" or (options.command == "run" and not options.execute):
             print(json.dumps(plan, ensure_ascii=False, indent=2))

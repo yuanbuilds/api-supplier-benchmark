@@ -20,10 +20,19 @@ class SupplierOrchestrationTests(unittest.TestCase):
         plan = supplier.make_plan(supplier.validate_config(self.config()))
         self.assertEqual(plan['planned_requests'], 706)
         self.assertEqual(plan['output_token_upper_bound'], 2891776)
+        self.assertEqual(plan['target']['thresholds']['ttft_p50_seconds'], 1.0)
         self.assertEqual([(p['rpm'], p['count'], p['window_seconds']) for p in plan['phases'][-3:]],
                          [(50,25,30),(100,50,30),(200,600,180)])
         self.assertEqual(plan['retries'], 0)
         self.assertEqual(sum(p['count'] for p in supplier.phases(True)), 207)
+
+    def test_existing_configs_receive_effective_p50_default_without_mutation(self):
+        old = {**self.config(), 'thresholds': {'min_success_rate': None, 'ttft_p95_seconds': None}}
+        validated = supplier.validate_config(old)
+        self.assertEqual(validated['thresholds']['ttft_p50_seconds'], 1.0)
+        self.assertNotIn('ttft_p50_seconds', old['thresholds'])
+        disabled = supplier.validate_config({**self.config(), 'thresholds': {'ttft_p50_seconds': None}})
+        self.assertIsNone(disabled['thresholds']['ttft_p50_seconds'])
 
     def test_invalid_auth_and_nonfinite_thresholds_rejected(self):
         for change in [dict(api_key='fake'), dict(base_url='http://example.com/v1'),
@@ -33,6 +42,8 @@ class SupplierOrchestrationTests(unittest.TestCase):
                        dict(extra_body={'nested':[{'Authorization':'fake'}]}),
                        dict(extra_body={'stream':False}), dict(max_output_tokens=True),
                        dict(thresholds={'ttft_p95_seconds':float('nan')}),
+                       dict(thresholds={'ttft_p50_seconds':float('nan')}),
+                       dict(thresholds={'ttft_p50_seconds':0}),
                        dict(thresholds={'min_success_rate':1.01})]:
             with self.subTest(change=change), self.assertRaises(ValueError):
                 supplier.validate_config({**self.config(), **change})
