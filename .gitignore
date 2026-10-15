@@ -1,0 +1,9 @@
+.env
+.env.*
+supplier.json
+.venv/
+results/
+node_modules/
+__pycache__/
+*.py[cod]
+.DS_Store

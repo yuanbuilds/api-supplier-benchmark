@@ -1,0 +1,12 @@
+{
+  "name": "model-benchmark-workbench",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pinned local business-contract evaluation toolchain",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "devDependencies": {
+    "promptfoo": "0.124.1"
+  }
+}

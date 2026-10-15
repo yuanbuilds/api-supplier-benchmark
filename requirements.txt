@@ -1,0 +1,4 @@
+# Reproducible Python runtime for the benchmark CLI (Python 3.10–3.12).
+evalscope[perf]==1.13.0
+Pillow==12.3.0
+PyYAML==6.0.3

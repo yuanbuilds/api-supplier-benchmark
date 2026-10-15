@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "exporter_version": 2,
+  "created_at": "2026-10-15T02:46:29.582468+00:00",
+  "publication_status": "prepared_release",
+  "license_status": "MIT",
+  "release_ready": true,
+  "source_commit": "721ec7d847c75928527aaaced4a5a8ef1da90720",
+  "source_has_uncommitted_changes": false,
+  "source_file_sha256": {
+    "start_supplier_test.sh": "9ac3dcafde32ba4e2433f72dce7288831718cf96d9216a34f85d397920341a6e",
+    "requirements.txt": "276e254f1684c4bdc7cd1f7c65771ba655e6c3f1427f743113fbe75ecfed5406",
+    "package.json": "56842e188724232ef0bfb2b5c44c0e92fc12656f003d52e3f69d8082d1c36e9a",
+    "scripts/supplier_test.py": "43460f800b54780d63c17fdbaa78f17dc76f7c37196ecbb6189595b47f9fbcda",
+    "scripts/check_env.py": "89960a1f44c9b594386b9a56cd4c7040fb61aaa06637be0245ef8f9551e730bb",
+    "scripts/run_benchmark.py": "2f784c377a6298349b3e12e57a9f9855fc838732d498dbe4f8a332c548334965",
+    "workbench/__init__.py": "0d713921f8f02ee3cb3a9aabd57397eac05ed713df2470e642b67aec6b8cb7a0",
+    "workbench/config.py": "be6988713ed4fa60d2caa29ea2ba5f0bad5b52b7d9d87e445a8ed41d8af2a541",
+    "workbench/catalog.py": "cb933c7bb27a8b4f0ac625ea5893a5e54e0bb760caad09a26dc37590a8c8c88d",
+    "workbench/toolchain.py": "804f8617fccb82c758d9129e5be7e593555bb4392aef9fce681713129c13227d",
+    "workbench/runs.py": "93807d6646e6820208c9fe6d75c1d4c45f3247119a17f8a09c317c2eaadf202f",
+    "workbench/supplier.py": "834a817ff854996aecbdb89f8e78d1571dc0abe4c94e98b5f53a5354add003da",
+    "workbench/engines/__init__.py": "9d95e87a3c7d01a59cac935ba4196da039d777907afa6d8af8c549671d4cda2d",
+    "workbench/engines/evalscope.py": "dceb9ad6174d01c4924b848eb88886d44f2b167bf5d2fe74dbf4e00fcbc6848e",
+    "workbench/engines/supplier_api.py": "08d5b323203e69305cbc8e95ee629ea9a980a4861cb2c11ab29c4bd00d2d9197",
+    "workbench/engines/supplier_stream.py": "d0781a8a2985e9d2cabde8bae112f0827cb8d4ff0a45d8fa27e2bfa5737d1fa1",
+    "workbench/engines/supplier_worker.py": "84111b971a3cfea6de4d629386720242ced71b0eddddee874bce5a2f5c562c0c",
+    "workbench/orchestrators/__init__.py": "4a98c4664f7bbb0ffebd15e42405bfa8b3db397f4f3d1bb7bc8ef82ed524f7f1",
+    "workbench/orchestrators/evalscope.py": "22f0a24e4c278642cbe1a0bfd0d803fe0e393a71d54891a1bf31775d4e9abf83",
+    "workbench/orchestrators/post_run.py": "cc9e30f86d1d6d3afd6fd64be6857b103250a05768e478275b87f51def3c75bf",
+    "workbench/reports/__init__.py": "837843107d83f6c947c45e8c8bbf0a68ab46f45240173fd9f44aa60fe84608c3",
+    "workbench/reports/evalscope.py": "07a2d57491241c5593d2d5764bfa5f7a704414f9d1f70e9b1e62ac182b1be705",
+    "workbench/reports/supplier.py": "885156d49f98971b29aee8a11d12238095997fd85a1844d6cfec1c7f7a44dcb2",
+    "workbench/reports/ui.py": "f0f38ca814b785666fc56826c1835a6b0ee42f05ee54dbe2c12454f650149558",
+    "workbench/reports/admission.py": "dc8dcb673cb13b482f01f01618406ac4a1244032a9bc695771bbfec070e4687a",
+    "workbench/reports/trends.py": "b91d5141bf4865e11785d0851103a4d092d8dbe883e0607df0ba6d51cc229a5e",
+    "workbench/reports/templates/report.css": "f2d0aa1464d650edae63db41fcc6ba0cec982033f6b5582d899d3667f45e8b4c",
+    "workbench/reports/templates/report.js": "4e5ab18bef2d7c8b135cda9dbf99a184c5fe2e9242c2fc8b9386f6affb62abe4",
+    "workbench/reports/templates/report-links.js": "7d3ca24c2e11c213f93ecf225f0483f6be85f9b4a347be764e7d0e079fd3ae09",
+    "workbench/testing/supplier_mock.py": "2f923c1ed6032b3668328d994f6beaabd6cfbb905c8c978123176681f8c14f4e",
+    "tests/helpers.py": "0aa0c7a723ce0b559b8718387b1905bd786d6760a5e2963ff5fba8376286fcdf",
+    "tests/test_supplier_engine.py": "c2bbb28212ac4037041ad120612e36f284798a4f0092bc29a21da057f05e24c2",
+    "tests/test_supplier_mock.py": "4b4b801bd98424cc50d22209089144cdde9ac0f8e858f51c2543cbb77add5e98",
+    "tests/test_supplier_report.py": "801e5d2b2bf2ebbcca4f672c269956f7798bfc4ea792eca0b1a4e74574b99c29",
+    "tests/test_supplier_orchestration.py": "d72bf243e423ef8f3f95a024d3f7f255cda90a369bf089c73021a7147b4dea29",
+    "tests/test_supplier_cli_environment.py": "022617c4b8a02bfeb5de76ea32205865afdf34ab3507a4413df3b7aa119204e6",
+    "GLM5.3_test_README.md": "f0ab9041d4aab147d3adad186a6f26904cc25f0ce3ee16c920a1c32b077c6327",
+    "public-release/LICENSE": "6f2ff29574771defdfdcb2f666291faf27ec6608dc321e9329973410324cd4b0",
+    "public-release/THIRD_PARTY_NOTICES.md": "1de76e64c2417408fac610c0810cbcd7505d5d866dc1e777182022355bc455ce"
+  },
+  "files": {
+    ".gitignore": {
+      "sha256": "b466f0daf16a884889fea8260696f6f87186e7f0deab9f5a4b7ddb0a55e4b818",
+      "bytes": 89
+    },
+    "GLM5.3_test_README.md": {
+      "sha256": "42b84ed6db70eb432f0cb477b663d4f629c43da8a6538e9722c406f0dc3ab670",
+      "bytes": 7750
+    },
+    "LICENSE": {
+      "sha256": "6f2ff29574771defdfdcb2f666291faf27ec6608dc321e9329973410324cd4b0",
+      "bytes": 1067
+    },
+    "Makefile": {
+      "sha256": "c19c27fdaf201ce9f598c03a597a41629134bc0933e80b8f3d2dd7275ebd90cc",
+      "bytes": 61
+    },
+    "PUBLICATION_STATUS.md": {
+      "sha256": "685bd6d80ed9cc10dbd3d3122e941a264735d0a3841422af2002ec4bc060ba1f",
+      "bytes": 633
+    },
+    "README.md": {
+      "sha256": "42b84ed6db70eb432f0cb477b663d4f629c43da8a6538e9722c406f0dc3ab670",
+      "bytes": 7750
+    },
+    "THIRD_PARTY_NOTICES.md": {
+      "sha256": "1de76e64c2417408fac610c0810cbcd7505d5d866dc1e777182022355bc455ce",
+      "bytes": 1663
+    },
+    "package.json": {
+      "sha256": "56842e188724232ef0bfb2b5c44c0e92fc12656f003d52e3f69d8082d1c36e9a",
+      "bytes": 254
+    },
+    "requirements.txt": {
+      "sha256": "276e254f1684c4bdc7cd1f7c65771ba655e6c3f1427f743113fbe75ecfed5406",
+      "bytes": 127
+    },
+    "scripts/check_env.py": {
+      "sha256": "89960a1f44c9b594386b9a56cd4c7040fb61aaa06637be0245ef8f9551e730bb",
+      "bytes": 6901
+    },
+    "scripts/run_benchmark.py": {
+      "sha256": "2f784c377a6298349b3e12e57a9f9855fc838732d498dbe4f8a332c548334965",
+      "bytes": 20266
+    },
+    "scripts/supplier_test.py": {
+      "sha256": "43460f800b54780d63c17fdbaa78f17dc76f7c37196ecbb6189595b47f9fbcda",
+      "bytes": 293
+    },
+    "start_supplier_test.sh": {
+      "sha256": "9ac3dcafde32ba4e2433f72dce7288831718cf96d9216a34f85d397920341a6e",
+      "bytes": 1653
+    },
+    "tests/helpers.py": {
+      "sha256": "0aa0c7a723ce0b559b8718387b1905bd786d6760a5e2963ff5fba8376286fcdf",
+      "bytes": 447
+    },
+    "tests/test_supplier_cli_environment.py": {
+      "sha256": "022617c4b8a02bfeb5de76ea32205865afdf34ab3507a4413df3b7aa119204e6",
+      "bytes": 4855
+    },
+    "tests/test_supplier_engine.py": {
+      "sha256": "c2bbb28212ac4037041ad120612e36f284798a4f0092bc29a21da057f05e24c2",
+      "bytes": 7144
+    },
+    "tests/test_supplier_mock.py": {
+      "sha256": "4b4b801bd98424cc50d22209089144cdde9ac0f8e858f51c2543cbb77add5e98",
+      "bytes": 7358
+    },
+    "tests/test_supplier_orchestration.py": {
+      "sha256": "d72bf243e423ef8f3f95a024d3f7f255cda90a369bf089c73021a7147b4dea29",
+      "bytes": 5011
+    },
+    "tests/test_supplier_report.py": {
+      "sha256": "801e5d2b2bf2ebbcca4f672c269956f7798bfc4ea792eca0b1a4e74574b99c29",
+      "bytes": 12995
+    },
+    "workbench/__init__.py": {
+      "sha256": "0d713921f8f02ee3cb3a9aabd57397eac05ed713df2470e642b67aec6b8cb7a0",
+      "bytes": 61
+    },
+    "workbench/catalog.py": {
+      "sha256": "cb933c7bb27a8b4f0ac625ea5893a5e54e0bb760caad09a26dc37590a8c8c88d",
+      "bytes": 11270
+    },
+    "workbench/config.py": {
+      "sha256": "be6988713ed4fa60d2caa29ea2ba5f0bad5b52b7d9d87e445a8ed41d8af2a541",
+      "bytes": 4128
+    },
+    "workbench/engines/__init__.py": {
+      "sha256": "9d95e87a3c7d01a59cac935ba4196da039d777907afa6d8af8c549671d4cda2d",
+      "bytes": 33
+    },
+    "workbench/engines/evalscope.py": {
+      "sha256": "dceb9ad6174d01c4924b848eb88886d44f2b167bf5d2fe74dbf4e00fcbc6848e",
+      "bytes": 26873
+    },
+    "workbench/engines/supplier_api.py": {
+      "sha256": "08d5b323203e69305cbc8e95ee629ea9a980a4861cb2c11ab29c4bd00d2d9197",
+      "bytes": 9101
+    },
+    "workbench/engines/supplier_stream.py": {
+      "sha256": "d0781a8a2985e9d2cabde8bae112f0827cb8d4ff0a45d8fa27e2bfa5737d1fa1",
+      "bytes": 4549
+    },
+    "workbench/engines/supplier_worker.py": {
+      "sha256": "84111b971a3cfea6de4d629386720242ced71b0eddddee874bce5a2f5c562c0c",
+      "bytes": 1326
+    },
+    "workbench/orchestrators/__init__.py": {
+      "sha256": "4a98c4664f7bbb0ffebd15e42405bfa8b3db397f4f3d1bb7bc8ef82ed524f7f1",
+      "bytes": 47
+    },
+    "workbench/orchestrators/evalscope.py": {
+      "sha256": "22f0a24e4c278642cbe1a0bfd0d803fe0e393a71d54891a1bf31775d4e9abf83",
+      "bytes": 2999
+    },
+    "workbench/orchestrators/post_run.py": {
+      "sha256": "cc9e30f86d1d6d3afd6fd64be6857b103250a05768e478275b87f51def3c75bf",
+      "bytes": 550
+    },
+    "workbench/reports/__init__.py": {
+      "sha256": "837843107d83f6c947c45e8c8bbf0a68ab46f45240173fd9f44aa60fe84608c3",
+      "bytes": 37
+    },
+    "workbench/reports/admission.py": {
+      "sha256": "dc8dcb673cb13b482f01f01618406ac4a1244032a9bc695771bbfec070e4687a",
+      "bytes": 4201
+    },
+    "workbench/reports/evalscope.py": {
+      "sha256": "07a2d57491241c5593d2d5764bfa5f7a704414f9d1f70e9b1e62ac182b1be705",
+      "bytes": 22629
+    },
+    "workbench/reports/supplier.py": {
+      "sha256": "885156d49f98971b29aee8a11d12238095997fd85a1844d6cfec1c7f7a44dcb2",
+      "bytes": 23123
+    },
+    "workbench/reports/templates/report-links.js": {
+      "sha256": "7d3ca24c2e11c213f93ecf225f0483f6be85f9b4a347be764e7d0e079fd3ae09",
+      "bytes": 1128
+    },
+    "workbench/reports/templates/report.css": {
+      "sha256": "f2d0aa1464d650edae63db41fcc6ba0cec982033f6b5582d899d3667f45e8b4c",
+      "bytes": 4958
+    },
+    "workbench/reports/templates/report.js": {
+      "sha256": "4e5ab18bef2d7c8b135cda9dbf99a184c5fe2e9242c2fc8b9386f6affb62abe4",
+      "bytes": 4611
+    },
+    "workbench/reports/trends.py": {
+      "sha256": "b91d5141bf4865e11785d0851103a4d092d8dbe883e0607df0ba6d51cc229a5e",
+      "bytes": 3617
+    },
+    "workbench/reports/ui.py": {
+      "sha256": "f0f38ca814b785666fc56826c1835a6b0ee42f05ee54dbe2c12454f650149558",
+      "bytes": 26861
+    },
+    "workbench/runs.py": {
+      "sha256": "93807d6646e6820208c9fe6d75c1d4c45f3247119a17f8a09c317c2eaadf202f",
+      "bytes": 2399
+    },
+    "workbench/supplier.py": {
+      "sha256": "834a817ff854996aecbdb89f8e78d1571dc0abe4c94e98b5f53a5354add003da",
+      "bytes": 18257
+    },
+    "workbench/testing/supplier_mock.py": {
+      "sha256": "2f923c1ed6032b3668328d994f6beaabd6cfbb905c8c978123176681f8c14f4e",
+      "bytes": 10258
+    },
+    "workbench/toolchain.py": {
+      "sha256": "804f8617fccb82c758d9129e5be7e593555bb4392aef9fce681713129c13227d",
+      "bytes": 1193
+    }
+  },
+  "manifest_excluded_from_own_hash": true,
+  "internal_endpoint_check": "passed",
+  "git_history_included": false
+}
