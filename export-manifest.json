@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "exporter_version": 2,
-  "created_at": "2026-10-15T02:46:29.582468+00:00",
+  "created_at": "2026-10-15T02:57:41.071589+00:00",
   "publication_status": "prepared_release",
   "license_status": "MIT",
   "release_ready": true,
-  "source_commit": "721ec7d847c75928527aaaced4a5a8ef1da90720",
+  "source_commit": "acad62aa0c6925653f2e1d37de35b650f6fb78db",
   "source_has_uncommitted_changes": false,
   "source_file_sha256": {
     "start_supplier_test.sh": "9ac3dcafde32ba4e2433f72dce7288831718cf96d9216a34f85d397920341a6e",
@@ -44,7 +44,7 @@
     "tests/test_supplier_report.py": "801e5d2b2bf2ebbcca4f672c269956f7798bfc4ea792eca0b1a4e74574b99c29",
     "tests/test_supplier_orchestration.py": "d72bf243e423ef8f3f95a024d3f7f255cda90a369bf089c73021a7147b4dea29",
     "tests/test_supplier_cli_environment.py": "022617c4b8a02bfeb5de76ea32205865afdf34ab3507a4413df3b7aa119204e6",
-    "GLM5.3_test_README.md": "f0ab9041d4aab147d3adad186a6f26904cc25f0ce3ee16c920a1c32b077c6327",
+    "GLM5.3_test_README.md": "f235f0df7dc4ee662851b560c4bfebe559065622554627a601bb605f2e150219",
     "public-release/LICENSE": "6f2ff29574771defdfdcb2f666291faf27ec6608dc321e9329973410324cd4b0",
     "public-release/THIRD_PARTY_NOTICES.md": "1de76e64c2417408fac610c0810cbcd7505d5d866dc1e777182022355bc455ce"
   },
@@ -54,8 +54,8 @@
       "bytes": 89
     },
     "GLM5.3_test_README.md": {
-      "sha256": "42b84ed6db70eb432f0cb477b663d4f629c43da8a6538e9722c406f0dc3ab670",
-      "bytes": 7750
+      "sha256": "fb2153764dbd8c3b93f065096645895ae7331b46ffa2c4139f710dbcb0b8f624",
+      "bytes": 8766
     },
     "LICENSE": {
       "sha256": "6f2ff29574771defdfdcb2f666291faf27ec6608dc321e9329973410324cd4b0",
@@ -70,8 +70,8 @@
       "bytes": 633
     },
     "README.md": {
-      "sha256": "42b84ed6db70eb432f0cb477b663d4f629c43da8a6538e9722c406f0dc3ab670",
-      "bytes": 7750
+      "sha256": "fb2153764dbd8c3b93f065096645895ae7331b46ffa2c4139f710dbcb0b8f624",
+      "bytes": 8766
     },
     "THIRD_PARTY_NOTICES.md": {
       "sha256": "1de76e64c2417408fac610c0810cbcd7505d5d866dc1e777182022355bc455ce",
