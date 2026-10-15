@@ -20,16 +20,6 @@ from evalscope.perf.utils.benchmark_util import BenchmarkData
 from workbench.engines.supplier_stream import SSEDecoder, StreamContractError, StrictTextStream
 
 
-def _redact_echo(value, secret):
-    if isinstance(value, str):
-        return value.replace(secret, "***") if secret else value
-    if isinstance(value, list):
-        return [_redact_echo(item, secret) for item in value]
-    if isinstance(value, dict):
-        return {key: _redact_echo(item, secret) for key, item in value.items()}
-    return value
-
-
 @register_dataset("workbench_supplier_trace")
 class SupplierTraceDataset(WorkloadTraceDatasetPlugin):
     """Use the official replay implementation and retain a conservative origin.
@@ -127,12 +117,18 @@ class StrictSupplierPlugin(OpenaiPlugin):
             output.first_chunk_latency = stream.first_generated_seconds or 0.0
             output.inter_chunk_latency = [b - a for a, b in zip(stream.output_times, stream.output_times[1:])]
             output.n_decode_chunks = len(stream.output_times)
-            output.generated_text = stream.text.replace(secret, "***") if secret else stream.text
-            # Redact echoed credentials before either native DB or HTML sees them.
-            output.response_messages = _redact_echo(stream.messages, secret)
+            # Native EvalScope stores response_messages as pickle/base64 in
+            # SQLite. Retain only validated usage numbers: text replacement or
+            # a later byte scan cannot catch credentials split across chunks,
+            # used as dictionary keys, or encoded by an upstream response.
+            usage = {name: value for name in ("prompt_tokens", "completion_tokens")
+                     if isinstance((value := (stream.usage or {}).get(name)), int)
+                     and not isinstance(value, bool) and value >= 0}
+            output.generated_text = ""
+            output.response_messages = [{"usage": usage}] if stream.usage is not None else []
             output.error = failure
             output.success = output.success and failure is None
-            output.prompt_tokens, output.completion_tokens = self.parse_responses(stream.messages)
+            output.prompt_tokens, output.completion_tokens = self.parse_responses(output.response_messages)
             rpm = float(os.environ.get("WORKBENCH_SUPPLIER_RPM", "0"))
             scheduled_offset = (sequence - 1) * 60 / rpm if rpm else None
             origin = self.first_start
@@ -160,8 +156,8 @@ class StrictSupplierPlugin(OpenaiPlugin):
                 "finish_reason": stream.finish_reason if stream.finish_reason in (None, "stop", "length", "content_filter", "tool_calls") else "other",
                 "body_nonempty": bool(stream.text.strip()),
                 "usage_present": stream.usage is not None,
-                "prompt_tokens": (stream.usage.get("prompt_tokens") if stream.usage and isinstance(stream.usage.get("prompt_tokens"), int) and not isinstance(stream.usage.get("prompt_tokens"), bool) and stream.usage["prompt_tokens"] >= 0 else None),
-                "completion_tokens": (stream.usage.get("completion_tokens") if stream.usage and isinstance(stream.usage.get("completion_tokens"), int) and not isinstance(stream.usage.get("completion_tokens"), bool) and stream.usage["completion_tokens"] >= 0 else None),
+                "prompt_tokens": usage.get("prompt_tokens"),
+                "completion_tokens": usage.get("completion_tokens"),
             }
             evidence = os.environ.get("WORKBENCH_SUPPLIER_RECORDS")
             if evidence:

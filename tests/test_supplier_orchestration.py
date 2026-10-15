@@ -18,10 +18,10 @@ class SupplierOrchestrationTests(unittest.TestCase):
 
     def test_full_plan_is_exact_and_does_not_call_provider(self):
         plan = supplier.make_plan(supplier.validate_config(self.config()))
-        self.assertEqual(plan['planned_requests'], 2106)
-        self.assertEqual(plan['output_token_upper_bound'], 8626176)
+        self.assertEqual(plan['planned_requests'], 706)
+        self.assertEqual(plan['output_token_upper_bound'], 2891776)
         self.assertEqual([(p['rpm'], p['count'], p['window_seconds']) for p in plan['phases'][-3:]],
-                         [(50,25,30),(100,50,30),(200,2000,600)])
+                         [(50,25,30),(100,50,30),(200,600,180)])
         self.assertEqual(plan['retries'], 0)
         self.assertEqual(sum(p['count'] for p in supplier.phases(True)), 207)
 

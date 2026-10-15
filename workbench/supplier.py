@@ -18,7 +18,7 @@ import urllib.parse
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-PACK_VERSION = "2.0.0"
+PACK_VERSION = "2.1.0"
 ENGINE_VERSION = "1.13.0"
 KEY_ENV = "SUPPLIER_API_KEY"
 
@@ -81,7 +81,7 @@ def validate_config(config, demo=False):
 def phases(short_demo=False):
     if short_demo:
         return [{"name": "connectivity", "count": 1, "rpm": None, "window_seconds": None}, {"name": "latency", "count": 6, "rpm": None, "window_seconds": None}, {"name": "rpm200", "count": 200, "rpm": 200, "window_seconds": 60}]
-    return [{"name": "connectivity", "count": 1, "rpm": None, "window_seconds": None}, {"name": "latency", "count": 30, "rpm": None, "window_seconds": None}, {"name": "rpm50", "count": 25, "rpm": 50, "window_seconds": 30}, {"name": "rpm100", "count": 50, "rpm": 100, "window_seconds": 30}, {"name": "rpm200", "count": 2000, "rpm": 200, "window_seconds": 600}]
+    return [{"name": "connectivity", "count": 1, "rpm": None, "window_seconds": None}, {"name": "latency", "count": 30, "rpm": None, "window_seconds": None}, {"name": "rpm50", "count": 25, "rpm": 50, "window_seconds": 30}, {"name": "rpm100", "count": 50, "rpm": 100, "window_seconds": 30}, {"name": "rpm200", "count": 600, "rpm": 200, "window_seconds": 180}]
 
 
 def make_plan(config, demo=False, short_demo=False):
@@ -251,7 +251,7 @@ def main(argv=None):
     parser.add_argument("command", nargs="?", choices=["setup", "plan", "run", "demo"], default="setup")
     parser.add_argument("--config", type=Path, default=ROOT / "supplier.json")
     parser.add_argument("--execute", action="store_true")
-    parser.add_argument("--full", action="store_true", help="本地模拟也执行正式 2106 次/200 RPM 十分钟计划")
+    parser.add_argument("--full", action="store_true", help="本地模拟也执行正式 706 次/200 RPM 三分钟计划")
     options = parser.parse_args(argv)
     server = None
     try:
@@ -269,6 +269,7 @@ def main(argv=None):
         print(f"\n{'本机模拟' if demo else '真实接口'}测试计划：{plan['planned_requests']} 次请求；最后 200 RPM 持续 {plan['phases'][-1]['window_seconds']} 秒。")
         print(f"输出 Token 上限 {plan['output_token_upper_bound']:,}，另计输入/思考；不是预计费用。")
         print("首生成内容/首正文及成功率阈值未配置时只测量，不宣称 SLA 通过。")
+        print("回传 ZIP 不包含 API Key，无需向采购方提供 Key；打包前检查残留，检测到即阻止打包。")
         if options.command == "plan" or (options.command == "run" and not options.execute):
             print(json.dumps(plan, ensure_ascii=False, indent=2))
             print("未调用模型。确认测试窗口与额度后加 --execute。")
