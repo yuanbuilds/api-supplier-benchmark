@@ -1,6 +1,7 @@
 .env
 .env.*
 supplier.json
+supplier-kimi.json
 .venv/
 results/
 node_modules/

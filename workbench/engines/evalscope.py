@@ -138,7 +138,16 @@ def supplier_test_parameters(test: dict) -> tuple[int, float | None]:
     counts = as_list(test.get("number"))
     if len(counts) != 1 or not isinstance(counts[0], int) or isinstance(counts[0], bool) or counts[0] < 1:
         raise ValueError("supplier_acceptance requires a single positive request number")
+    workload = test.get("supplier_workload", "latency")
+    if workload not in ("latency", "concurrency"):
+        raise ValueError("supplier_workload must be latency or concurrency")
     rpm = test.get("requests_per_minute")
+    if workload == "concurrency":
+        if rpm is not None or test.get("open_loop") is True:
+            raise ValueError("supplier concurrency workload is closed-loop and cannot use RPM or open_loop")
+        parallel = as_list(test.get("concurrency"))
+        if len(parallel) != 1 or type(parallel[0]) is not int or parallel[0] < 1:
+            raise ValueError("supplier concurrency workload requires one explicit positive integer concurrency")
     if rpm is not None:
         duration = test.get("duration_seconds")
         if not isinstance(rpm, (int, float)) or not math.isfinite(rpm) or rpm <= 0:
@@ -147,7 +156,7 @@ def supplier_test_parameters(test: dict) -> tuple[int, float | None]:
             raise ValueError("duration_seconds must be positive and finite")
         if not math.isclose(counts[0], rpm * duration / 60, abs_tol=1e-9):
             raise ValueError("number must equal RPM * duration_seconds / 60")
-    elif as_list(test.get("concurrency"), [1]) != [1]:
+    elif workload == "latency" and as_list(test.get("concurrency"), [1]) != [1]:
         raise ValueError("supplier latency phase must use concurrency:[1]")
     return counts[0], rpm
 
@@ -183,12 +192,13 @@ def prepare_supplier_config(test: dict, item: dict, output_dir: Path) -> Path:
         raise ValueError("timeout_seconds must be positive and finite")
     kwargs = {"url": item["url"], "api": "workbench_strict_supplier", "model": item["model"],
               "dataset": "workbench_supplier_trace" if rpm else "line_by_line", "dataset_path": str(dataset),
-              "parallel": [0] if rpm else [1], "number": [count], "rate": [rpm / 60] if rpm else [-1],
+              "parallel": [0] if rpm else as_list(test.get("concurrency"), [1]), "number": [count], "rate": [rpm / 60] if rpm else [-1],
               "open_loop": bool(rpm), "stream": True, "max_tokens": test.get("max_tokens", 4096),
               "no_test_connection": True, "warmup_num": 0, "total_timeout": timeout,
               "connect_timeout": min(timeout, 10), "read_timeout": timeout, "outputs_dir": str(output_dir / "native"),
               "name": "supplier-acceptance", "debug": False, "seed": None}
     config = {"schema_version": 1, "arguments": kwargs, "requests_per_minute": rpm,
+              "supplier_workload": test.get("supplier_workload", "latency"),
               "duration_seconds": test.get("duration_seconds"), "planned_requests": count,
               "records_file": str(output_dir / "supplier-requests.jsonl"),
               "schedule_file": str(output_dir / "supplier-schedule.json"),
@@ -256,7 +266,8 @@ def build_commands(batch: dict, providers: dict) -> list[dict]:
                 commands.append({"provider": provider_name, "model": model, "api_key_env": api_key_env,
                                  "modality": modality, "dataset": dataset_path, "tokenizer_path": None,
                                  "image_width": None, "image_height": None, "image_num": None,
-                                 "parallel": [0] if test.get("requests_per_minute") else [1], "number": number,
+                                 "parallel": [0] if test.get("requests_per_minute") else parallel, "number": number,
+                                 "supplier_workload": test.get("supplier_workload", "latency"),
                                  "planned_requests_per_minute": test.get("requests_per_minute"),
                                  "duration_seconds": test.get("duration_seconds"), "supplier_acceptance": True,
                                  "url": output_url,
@@ -481,6 +492,7 @@ def main() -> int:
                 "planned_requests_per_minute": item.get("planned_requests_per_minute"),
                 "duration_seconds": item.get("duration_seconds"),
                 "supplier_acceptance": strict_supplier,
+                "supplier_workload": item.get("supplier_workload") if strict_supplier else None,
                 "output_dir": str(task_output_dir.relative_to(ROOT)),
                 "command": command_for_storage(command),
                 "status": "dry_run" if args.dry_run else "pending",

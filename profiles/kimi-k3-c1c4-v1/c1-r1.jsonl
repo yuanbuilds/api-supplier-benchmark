@@ -1,0 +1,10 @@
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 01。以下标识仅用于区分公开验收请求。\n公开验收样本 01。请用约100个中文字，分3点解释模型API客户遇到限流时应如何处理。不要调用工具。"}], "reasoning_effort": "low", "temperature": 1}
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 02。以下标识仅用于区分公开验收请求。\n公开验收样本 02。请用约100个中文字，分3点解释API密钥的用途和保管方式。不要输出代码。"}], "reasoning_effort": "low", "temperature": 1}
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 03。以下标识仅用于区分公开验收请求。\n公开验收样本 03。请用约100个中文字，分3点说明如何核对模型ID、API地址和额度。不要输出代码。"}], "reasoning_effort": "low", "temperature": 1}
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 04。以下标识仅用于区分公开验收请求。\n公开验收样本 04。请用约100个中文字，分3点说明流式响应与非流式响应的区别。不要输出代码。"}], "reasoning_effort": "low", "temperature": 1}
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 05。以下标识仅用于区分公开验收请求。\n公开验收样本 05。请用约100个中文字，分3点说明如何使用用量日志排查一次API调用。不要输出代码。"}], "reasoning_effort": "low", "temperature": 1}
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 06。以下标识仅用于区分公开验收请求。\n公开验收样本 06。请用约100个中文字，分3点说明HTTP 401与429错误的区别。不要输出代码。"}], "reasoning_effort": "low", "temperature": 1}
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 07。以下标识仅用于区分公开验收请求。\n公开验收样本 07。请用约100个中文字，分3点解释首个Token时间和完整回答耗时的区别。不要输出代码。"}], "reasoning_effort": "low", "temperature": 1}
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 08。以下标识仅用于区分公开验收请求。\n公开验收样本 08。请用约100个中文字，分3点说明如何避免在公开文档中泄露API密钥。不要输出代码。"}], "reasoning_effort": "low", "temperature": 1}
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 09。以下标识仅用于区分公开验收请求。\n公开验收样本 09。请用约100个中文字，分3点说明第一次接入模型API应检查哪些设置。不要输出代码。"}], "reasoning_effort": "low", "temperature": 1}
+{"messages": [{"role": "user", "content": "公开渠道对比批次 TC-COMPARE-20261019-C1-R1，请求序号 10。以下标识仅用于区分公开验收请求。\n公开验收样本 10。请用约100个中文字，分3点说明API请求超时后应如何排查。不要输出代码。"}], "reasoning_effort": "low", "temperature": 1}

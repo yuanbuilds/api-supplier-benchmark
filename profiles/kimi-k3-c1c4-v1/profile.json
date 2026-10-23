@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "kimi-k3-c1c4-v1",
+  "label": "Kimi K3 C1/C4 性能基线 v1",
+  "request_defaults": {
+    "temperature": 1,
+    "reasoning_effort": "low",
+    "top_p": 0.95,
+    "n": 1,
+    "presence_penalty": 0,
+    "frequency_penalty": 0
+  },
+  "max_output_tokens": 1024,
+  "timeouts": {
+    "total_seconds": 60,
+    "read_seconds": 60,
+    "connect_seconds": 10
+  },
+  "phases": [
+    {
+      "name": "connectivity",
+      "count": 1,
+      "concurrency": 1,
+      "rpm": null,
+      "window_seconds": null
+    },
+    {
+      "name": "c1-r1",
+      "count": 10,
+      "concurrency": 1,
+      "rpm": null,
+      "window_seconds": null,
+      "dataset": "c1-r1.jsonl",
+      "original_dataset_sha256": "3749edd92e565f120a815c47cd96e238fd7dd9f59173fc90ac5f890c05ccd649"
+    },
+    {
+      "name": "c1-r2",
+      "count": 10,
+      "concurrency": 1,
+      "rpm": null,
+      "window_seconds": null,
+      "dataset": "c1-r2.jsonl",
+      "original_dataset_sha256": "ef821d8d127563b71fb7a8ae3941f2e1d1d6754d968567ccf418e4d645bfa76c"
+    },
+    {
+      "name": "c4",
+      "count": 12,
+      "concurrency": 4,
+      "rpm": null,
+      "window_seconds": null,
+      "dataset": "c4.jsonl",
+      "original_dataset_sha256": "b8c2abcbc131ec062843757ccebca930487e2a5321ad3e4d3f3f3ad81b3abc9f"
+    }
+  ],
+  "input_provenance": "32条2026-10-19公开合成输入，messages与原文件字节保持；执行时显式补齐历史平台有效采样参数，编译后请求另记SHA256。",
+  "scope": "连通性与C1/C4小样本性能；未测200 RPM、长期SLA、五项功能、计费或模型身份。"
+}

@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from workbench.engines.supplier_stream import SSEDecoder, StreamContractError, StrictTextStream
-from workbench.engines.evalscope import build_commands, prepare_supplier_config, supplier_worker_environment
+from workbench.engines.evalscope import build_commands, prepare_supplier_config, supplier_test_parameters, supplier_worker_environment
 from workbench.reports.evalscope import build_result_row
 
 
@@ -113,6 +113,51 @@ class SupplierConfigurationTests(unittest.TestCase):
                                   {'p':{'base_url':'https://example.com/v1','api_key_env':'SUPPLIER_API_KEY'}})
         self.assertNotIn('--headers', commands[0]['command_template'])
         self.assertNotIn('--api-key', commands[0]['command_template'])
+
+    def test_explicit_concurrency_compiles_native_closed_loop_without_changing_metrics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); source = root / 'input.jsonl'
+            source.write_text(json.dumps({'messages': [{'role': 'user', 'content': 'public fixture'}],
+                                          'reasoning_effort': 'low'}) + '\n')
+            test = {'supplier_acceptance': True, 'supplier_workload': 'concurrency',
+                    'modality': 'text', 'dataset': 'line_by_line', 'dataset_path': str(source),
+                    'stream': True, 'number': [12], 'concurrency': [4], 'max_tokens': 1024,
+                    'timeout_seconds': 60}
+            item = build_commands({'test': test, 'targets': {'p': ['m']}},
+                                  {'p': {'base_url': 'https://example.com/v1', 'api_key_env': 'TEST_KEY'}})[0]
+            self.assertEqual(item['parallel'], [4])
+            self.assertEqual(item['number'], [12])
+            config = json.loads(prepare_supplier_config(test, item, root).read_text())
+            args = config['arguments']
+            self.assertEqual(config['supplier_workload'], 'concurrency')
+            self.assertEqual(args['parallel'], [4]); self.assertEqual(args['number'], [12])
+            self.assertFalse(args['open_loop']); self.assertEqual(args['rate'], [-1])
+            self.assertEqual(args['api'], 'workbench_strict_supplier')
+            self.assertEqual(args['dataset'], 'line_by_line')
+            self.assertEqual(args['max_tokens'], 1024); self.assertEqual(args['warmup_num'], 0)
+            self.assertTrue(args['no_test_connection']); self.assertTrue(args['stream'])
+            self.assertNotIn('api_key', args); self.assertNotIn('headers', args)
+            self.assertIsNone(config['requests_per_minute'])
+            bodies = [json.loads(line) for line in (root / 'request-bodies.jsonl').read_text().splitlines()]
+            self.assertEqual(len(bodies), 12)
+            self.assertTrue(all(body['reasoning_effort'] == 'low' for body in bodies))
+            self.assertFalse((root / 'workload-trace.jsonl').exists())
+
+    def test_concurrency_requires_explicit_opt_in_and_cannot_disguise_rpm(self):
+        base = {'supplier_acceptance': True, 'modality': 'text', 'dataset': 'line_by_line',
+                'dataset_path': 'public-fixture.jsonl', 'stream': True, 'number': [12], 'concurrency': [4]}
+        for change in ({}, {'supplier_workload': 'latency'}, {'supplier_workload': 'unknown'},
+                       {'supplier_workload': 'concurrency', 'concurrency': [0]},
+                       {'supplier_workload': 'concurrency', 'concurrency': [-1]},
+                       {'supplier_workload': 'concurrency', 'concurrency': [True]},
+                       {'supplier_workload': 'concurrency', 'concurrency': [4.0]},
+                       {'supplier_workload': 'concurrency', 'concurrency': [1, 4]},
+                       {'supplier_workload': 'concurrency', 'concurrency': None},
+                       {'supplier_workload': 'concurrency', 'requests_per_minute': 12, 'duration_seconds': 60},
+                       {'supplier_workload': 'concurrency', 'open_loop': True}):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                supplier_test_parameters({**base, **change})
+        self.assertEqual(supplier_test_parameters({**base, 'concurrency': [1]}), (12, None))
 
 
 class SupplierCredentialPersistenceTests(unittest.IsolatedAsyncioTestCase):

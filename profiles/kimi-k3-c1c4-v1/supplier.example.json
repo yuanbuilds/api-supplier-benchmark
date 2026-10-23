@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "profile": "kimi-k3-c1c4-v1",
+  "supplier": "填写供应商名称",
+  "base_url": "https://api.example.com/v1",
+  "model": "填写接口实际接受的Kimi K3模型ID",
+  "region": "填写测试机器地区",
+  "reasoning_mode": "reasoning_effort=low（固定）",
+  "max_output_tokens": 1024,
+  "extra_body": {},
+  "thresholds": {
+    "min_success_rate": null,
+    "ttft_p50_seconds": null,
+    "ttft_p95_seconds": null,
+    "ttfot_p95_seconds": null
+  }
+}

@@ -33,7 +33,7 @@ ERROR_CODES = {
     "EMPTY_BODY", "NON_STREAM_RESPONSE", "DATA_AFTER_DONE", "CONTRACT_MISMATCH",
 }
 PHASE_LABELS = {"connectivity": "连通性", "latency": "低负载计时", "rpm50": "50 RPM",
-                "rpm100": "100 RPM", "rpm200": "200 RPM"}
+                "rpm100": "100 RPM", "rpm200": "200 RPM", "c1-r1": "C1 第一轮", "c1-r2": "C1 第二轮", "c4": "C4 并发"}
 TTFT_P50_PHASES = {"latency", "rpm200"}
 ASSESSMENT_LABELS = {"measurement_only": "已完成测量，未判定 SLA", "passed": "满足已设阈值",
                      "not_passed": "未达到本次测试要求", "incomplete": "测试或证据未完成，不能判断供应商"}
@@ -320,7 +320,7 @@ def build_report(output: Path | str) -> dict:
     assessment = ("incomplete" if issues else "not_passed" if failures else
                   "measurement_only" if p50_without_success_gate else
                   "passed" if any(v is not None for v in configured.values()) else "measurement_only")
-    summary = {"schema_version": 1, "pack_version": manifest.get("pack_version"),
+    summary = {"schema_version": 1, "pack_version": manifest.get("pack_version"), "profile": manifest.get("profile"),
                "engine": manifest.get("engine"), "demo": manifest.get("demo") is True,
                "status": "failed" if issues else "completed", "complete": not issues, "assessment": assessment,
                "issues": sorted(set(issues)), "failures": failures,
@@ -335,7 +335,7 @@ def build_report(output: Path | str) -> dict:
         writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(csv_rows)
-    workbench = {"schema_version": 1, "run_id": output.name, "batch_file": "supplier-profile/v2",
+    workbench = {"schema_version": 1, "run_id": output.name, "batch_file": manifest.get("profile") or "supplier-profile/v2",
                  "engine": "evalscope_perf", "status": summary["status"],
                  "conclusion": {"measurement_only": "needs_more_data", "passed": "approved", "not_passed": "rejected", "incomplete": "needs_more_data"}[assessment],
                  "assessment": assessment, "demo": summary["demo"], "results": [
@@ -395,6 +395,14 @@ def build_report(output: Path | str) -> dict:
                          "errors": "; ".join(f"{k}: {v}" for k, v in p["errors"].items()) or "无",
                          "evidence": "完整" if p["evidence_status"] == "complete" else "不完整", "report": p["report"]} for p in phases],
                "generated_at": summary["generated_at"]}
+    if manifest.get("profile") == "kimi-k3-c1c4-v1":
+        payload["title"] = "Kimi K3 C1/C4 性能报告" + (" · 本地模拟" if summary["demo"] else "")
+        payload["metrics"] = [payload["metrics"][0]] + [
+            {"label": PHASE_LABELS[p["name"]] + " TTFT P50", "value": _p50_value(p), "note": "小样本方向性测量；未设SLA门槛"}
+            for p in phases if p["name"] in ("c1-r1", "c1-r2", "c4")]
+        payload["sections"] = [s for s in sections if s["title"] != "RPM 与完成口径"]
+        payload["sections"].insert(1, {"title": "测试方案与边界", "body": "kimi-k3-c1c4-v1：连通1次；C1两轮各10次；C4共12次，最多4个在途请求，合计33次。temperature=1、reasoning_effort=low、top_p=0.95、n=1、两项penalty=0、max_tokens=1024。总/读取超时60秒、连接10秒；不预热、不重试。32条公开合成输入保留原文，显式补齐参数后的请求另记哈希。不测试200 RPM、长期SLA、功能、计费或模型身份；不继承GLM的1秒门槛。供应商自测与采购方复验须分别记录网络区域和调用路径。"})
+        payload["columns"] = [c for c in payload["columns"] if c["key"] not in ("rate", "ttft_p50_check")]
     _write_json(output / "report-data.json", payload)
     write_static_report(output / "report.html", payload)
     return summary
